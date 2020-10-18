@@ -1,9 +1,203 @@
 {
-    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "$schema": "https://schema.management.azure.com/schemas/2019-08-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
-    "parameters": {},
-    "functions": [],
-    "variables": {},
-    "resources": [],
+
+    "parameters": {
+        "webAppName": {
+            "type": "string",
+            "defaultValue": "[concat('webApp-', uniqueString(resourceGroup().id))]",
+            "minLength": 2,
+            "metadata": {
+                "description": "Web app name."
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "Location for all resources."
+            }
+        },
+        "sku": {
+            "type": "string",
+            "defaultValue": "F1",
+            "metadata": {
+                "description": "The SKU of App Service Plan."
+            }
+        },
+        "linuxFxVersion": {
+            "type": "string",
+            "defaultValue": "DOTNETCORE|3.1",
+            "metadata": {
+                "description": "The Runtime stack of current web app"
+            }
+        }
+    },
+    "variables": {
+        "appServicePlanName": "[concat('AppServicePlan-', parameters('webAppName'))]",
+        "appInsightsName": "[concat('app-insights-', parameters('webAppName'))]",
+        "keyVaultName": "key-vault-astro-prod",
+        "storageAccountName": "storageastroprod",
+        "sqlServerName": "sql-server-astro-prod",
+        "sqlDbName": "sql-db-astro-prod",
+        "sqlServerLogin": "astroadmin",
+        "sqlServerAdminPw": "[concat('P', uniqueString(resourceGroup().id, '51F78DEE-A92C-4714-9E18-A69FFB638FDE', 'x', '!'))]"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Web/serverfarms",
+            "apiVersion": "2020-06-01",
+            "name": "[variables('appServicePlanName')]",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "[parameters('sku')]"
+            },
+            "kind": "linux",
+            "properties": {
+                "reserved": true
+            }
+        },
+        {
+            "name": "[parameters('webAppName')]",
+            "type": "Microsoft.Web/sites",
+            "apiVersion": "2020-06-01",
+            "location": "[parameters('location')]",
+            "tags": {
+                "[concat('hidden-related:', resourceGroup().id, '/providers/Microsoft.Web/serverfarms/appServicePlan1')]": "Resource",
+                "displayName": "[parameters('webAppName')]"
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+                "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
+            ],
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {
+                "name": "[parameters('webAppName')]",
+                "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
+                "siteConfig": {
+                    "linuxFxVersion": "[parameters('linuxFxVersion')]",
+                    "appSettings": [
+                        {
+                            "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+                            "value": "[reference(variables('appInsightsName'), '2015-05-01').InstrumentationKey]"
+                        },
+                        {
+                            "name": "KeyVaultName",
+                            "value": "[variables('keyVaultName')]"
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "apiVersion": "2015-05-01",
+            "name": "[variables('appInsightsName')]",
+            "type": "Microsoft.Insights/components",
+            "location": "[parameters('location')]",
+            "kind": "web",
+            "properties": {
+                "Application_Type": "web"
+            }
+        },
+        {
+            "name": "[variables('storageAccountName')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2019-06-01",
+            "location": "[parameters('location')]",
+            "kind": "BlobStorage",
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "properties": {
+                "accessTier": "Hot"
+            }
+        },
+        {
+            "name": "[variables('keyVaultName')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "apiVersion": "2018-02-14",
+            "location": "[parameters('location')]",
+            "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "accessPolicies": [
+                    {
+                        "tenantId": "[subscription().tenantId]",
+                        "objectId": "[reference(resourceId('Microsoft.Web/sites/', parameters('webAppName')), '2020-06-01', 'Full').identity.principalId]",
+                        "permissions": {
+                            "secrets": [
+                                "List",
+                                "Get",
+                                "Set"
+                            ]
+                        }
+                    }
+                ],
+                "sku": {
+                    "name": "standard",
+                    "family": "A"
+                }
+            },
+            "resources": [
+                {
+                    "type": "secrets",
+                    "name": "ConnectionStrings--StorageAccount",
+                    "apiVersion": "2016-10-01",
+                    "dependsOn": [
+                        "[variables('keyVaultName')]"
+                    ],
+                    "properties": {
+                        "value": "[listKeys(variables('storageAccountName'), '2019-06-01').keys[0].value]"
+                    }
+                },
+                {
+                    "name": "Connectionstrings--Astro",
+                    "type": "secrets",
+                    "apiVersion": "2016-10-01",
+                    "dependsOn": [
+                        "[variables('keyVaultName')]"
+                    ],
+                    "properties": {
+                        "value": "[concat('Data Source=tcp:', reference(concat('Microsoft.Sql/servers/', variables('sqlServerName'))).fullyQualifiedDomainName, ',1433;Initial Catalog=', variables('sqlDbName'), ';User Id=', variables('sqlServerLogin'), '@', variables('sqlServerName'), ';Password=', variables('sqlServerAdminPw'), ';')]"
+                    }
+                }
+            ],
+            "dependsOn": [
+                "[variables('storageAccountName')]",
+                "[variables('sqlServerName')]"
+            ]
+        },
+        {
+            "name": "[variables('sqlServerName')]",
+            "type": "Microsoft.Sql/servers",
+            "apiVersion": "2020-02-02-preview",
+            "location": "[parameters('location')]",
+            "properties": {
+                "administratorLogin": "[variables('sqlServerLogin')]",
+                "administratorLoginPassword": "[variables('sqlServerAdminPw')]"
+            },
+            "resources": [
+                {
+                    "name": "[variables('sqlDbName')]",
+                    "type": "databases",
+                    "apiVersion": "2020-02-02-preview",
+                    "location": "[parameters('location')]",
+                    "sku": {
+                        "name": "Basic",
+                        "tier": "Basic"
+                    },
+                    "dependsOn": [
+                        "[variables('sqlServerName')]"
+                    ],
+                    "properties": {
+                        "collation": "SQL_Latin1_General_CP1_CI_AS",
+                        "edition": "Basic",
+                        "requestedServiceObjectiveName": "Basic"
+                    }
+                }
+            ]
+        }
+    ],
     "outputs": {}
 }
