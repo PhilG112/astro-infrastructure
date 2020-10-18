@@ -86,6 +86,10 @@
                         {
                             "name": "KeyVaultName",
                             "value": "[variables('keyVaultName')]"
+                        },
+                        {
+                            "name": "ASPNETCORE_ENVIRONMENT",
+                            "value": "Prod"
                         }
                     ]
                 }
