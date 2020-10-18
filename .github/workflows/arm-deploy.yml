@@ -20,13 +20,13 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
       
-      - uses: azure/login@v1
       - name: Azure login
+        uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_PROD_CREDS }}
           
-      - uses: azure/arm-deploy@v1
       - name: Run ARM deploy
+        uses: azure/arm-deploy@v1
         with:
           subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           resourceGroupName: ${{ secrets.AZURE_PROD_RG }}
