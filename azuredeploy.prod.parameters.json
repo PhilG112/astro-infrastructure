@@ -2,11 +2,11 @@
     "$schema": "https://schema.management.azure.com/schemas/2019-08-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "webAppName": {
-            "value": "astro-webapp-prod"
-        },
-        "sku": {
+        "appServicePlanSku": {
             "value": "F1"
+        },
+        "env": {
+            "value": "prod"
         }
     }
 }

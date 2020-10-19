@@ -3,14 +3,6 @@
     "contentVersion": "1.0.0.0",
 
     "parameters": {
-        "webAppName": {
-            "type": "string",
-            "defaultValue": "[concat('webApp-', uniqueString(resourceGroup().id))]",
-            "minLength": 2,
-            "metadata": {
-                "description": "Web app name."
-            }
-        },
         "location": {
             "type": "string",
             "defaultValue": "[resourceGroup().location]",
@@ -18,7 +10,7 @@
                 "description": "Location for all resources."
             }
         },
-        "sku": {
+        "appServicePlanSku": {
             "type": "string",
             "defaultValue": "F1",
             "metadata": {
@@ -31,16 +23,23 @@
             "metadata": {
                 "description": "The Runtime stack of current web app"
             }
+        },
+        "env": {
+            "type": "string",
+            "metadata": {
+                "description": "The environment in which this is being deployed, e.g prod/dev"
+            }
         }
     },
     "variables": {
-        "appServicePlanName": "[concat('AppServicePlan-', parameters('webAppName'))]",
-        "appInsightsName": "[concat('app-insights-', parameters('webAppName'))]",
-        "keyVaultName": "key-vault-astro-prod",
-        "storageAccountName": "storageastroprod",
-        "sqlServerName": "sql-server-astro-prod",
-        "sqlDbName": "sql-db-astro-prod",
-        "sqlServerLogin": "astroadmin",
+        "webAppName": "[concat(parameters('env'), '-astro-api')]",
+        "appServicePlanName": "[concat(parameters('env'), '-appserivceplan')]",
+        "appInsightsName": "[concat(parameters('env'), '-appinsights-', variables('webAppName'))]",
+        "keyVaultName": "[concat(parameters('env'), '-astro-keyvault')]",
+        "storageAccountName": "[concat(parameters('env'), 'astrostorage')]",
+        "sqlServerName": "[concat(parameters('env'), '-astro-sqlserver')]",
+        "sqlDbName": "[concat(parameters('env'), '-astro-sqldb')]",
+        "sqlServerLogin": "[concat('L', uniqueString(resourceGroup().id, '2A78F916-9CD8-47E2-9665-24B26E3BB6C0', 'x', '!'))]",
         "sqlServerAdminPw": "[concat('P', uniqueString(resourceGroup().id, '51F78DEE-A92C-4714-9E18-A69FFB638FDE', 'x', '!'))]"
     },
     "resources": [
@@ -50,7 +49,7 @@
             "name": "[variables('appServicePlanName')]",
             "location": "[parameters('location')]",
             "sku": {
-                "name": "[parameters('sku')]"
+                "name": "[parameters('appServicePlanSku')]"
             },
             "kind": "linux",
             "properties": {
@@ -58,14 +57,10 @@
             }
         },
         {
-            "name": "[parameters('webAppName')]",
+            "name": "[variables('webAppName')]",
             "type": "Microsoft.Web/sites",
             "apiVersion": "2020-06-01",
             "location": "[parameters('location')]",
-            "tags": {
-                "[concat('hidden-related:', resourceGroup().id, '/providers/Microsoft.Web/serverfarms/appServicePlan1')]": "Resource",
-                "displayName": "[parameters('webAppName')]"
-            },
             "dependsOn": [
                 "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
                 "[resourceId('Microsoft.Insights/components', variables('appInsightsName'))]"
@@ -74,7 +69,7 @@
                 "type": "SystemAssigned"
             },
             "properties": {
-                "name": "[parameters('webAppName')]",
+                "name": "[variables('webAppName')]",
                 "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
                 "siteConfig": {
                     "linuxFxVersion": "[parameters('linuxFxVersion')]",
@@ -89,7 +84,7 @@
                         },
                         {
                             "name": "ASPNETCORE_ENVIRONMENT",
-                            "value": "Prod"
+                            "value": "[parameters('env')]"
                         }
                     ]
                 }
@@ -128,7 +123,7 @@
                 "accessPolicies": [
                     {
                         "tenantId": "[subscription().tenantId]",
-                        "objectId": "[reference(resourceId('Microsoft.Web/sites/', parameters('webAppName')), '2020-06-01', 'Full').identity.principalId]",
+                        "objectId": "[reference(variables('webAppName'), '2020-06-01', 'Full').identity.principalId]",
                         "permissions": {
                             "secrets": [
                                 "List",
@@ -152,7 +147,8 @@
                         "[variables('keyVaultName')]"
                     ],
                     "properties": {
-                        "value": "[listKeys(variables('storageAccountName'), '2019-06-01').keys[0].value]"
+
+                        "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listKeys(variables('storageAccountName'), '2019-06-01').keys[0].value, ';EndpointSuffix=core.windows.net')]"
                     }
                 },
                 {
@@ -198,6 +194,19 @@
                         "collation": "SQL_Latin1_General_CP1_CI_AS",
                         "edition": "Basic",
                         "requestedServiceObjectiveName": "Basic"
+                    }
+                },
+                {
+                    "type": "firewallRules",
+                    "apiVersion": "2014-04-01",
+                    "dependsOn": [
+                        "[variables('sqlServerName')]"
+                    ],
+                    "location": "[parameters('location')]",
+                    "name": "AllowAllWindowsAzureIps",
+                    "properties": {
+                        "startIpAddress": "0.0.0.0",
+                        "endIpAddress": "0.0.0.0"
                     }
                 }
             ]
