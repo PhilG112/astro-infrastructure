@@ -11,7 +11,7 @@
         "sqlServerAdminPw": {
             "reference": {
               "keyVault": {
-              "id": "/subscriptions/d06d14c9-5256-4c2d-9430-62db334a9819/resourceGroups/<rg-name>/providers/Microsoft.KeyVault/vaults/atro-devops-kv>"
+              "id": "/subscriptions/d06d14c9-5256-4c2d-9430-62db334a9819/resourceGroups/devops/providers/Microsoft.KeyVault/vaults/atro-devops-kv>"
               },
               "secretName": "prodsqlpassword"
             }
