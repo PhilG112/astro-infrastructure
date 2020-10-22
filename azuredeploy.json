@@ -29,6 +29,12 @@
             "metadata": {
                 "description": "The environment in which this is being deployed, e.g prod/dev"
             }
+        },
+        "sqlServerAdminPw": {
+            "type": "string",
+            "metadata": {
+                "description": "Password for sql database."
+            }
         }
     },
     "variables": {
@@ -39,8 +45,7 @@
         "storageAccountName": "[concat(parameters('env'), 'astrostorage')]",
         "sqlServerName": "[concat(parameters('env'), '-astro-sqlserver')]",
         "sqlDbName": "[concat(parameters('env'), '-astro-sqldb')]",
-        "sqlServerLogin": "[concat('L', uniqueString(resourceGroup().id, '2A78F916-9CD8-47E2-9665-24B26E3BB6C0', 'x', '!'))]",
-        "sqlServerAdminPw": "[concat('P', uniqueString(resourceGroup().id, '51F78DEE-A92C-4714-9E18-A69FFB638FDE', 'x', '!'))]"
+        "sqlServerLogin": "[concat('L', uniqueString(resourceGroup().id, '2A78F916-9CD8-47E2-9665-24B26E3BB6C0', 'x', '!'))]"
     },
     "resources": [
         {
@@ -159,7 +164,7 @@
                         "[variables('keyVaultName')]"
                     ],
                     "properties": {
-                        "value": "[concat('Data Source=tcp:', reference(concat('Microsoft.Sql/servers/', variables('sqlServerName'))).fullyQualifiedDomainName, ',1433;Initial Catalog=', variables('sqlDbName'), ';User Id=', variables('sqlServerLogin'), '@', variables('sqlServerName'), ';Password=', variables('sqlServerAdminPw'), ';')]"
+                        "value": "[concat('Data Source=tcp:', reference(concat('Microsoft.Sql/servers/', variables('sqlServerName'))).fullyQualifiedDomainName, ',1433;Initial Catalog=', variables('sqlDbName'), ';User Id=', variables('sqlServerLogin'), '@', variables('sqlServerName'), ';Password=', parameters('sqlServerAdminPw'), ';')]"
                     }
                 }
             ],
@@ -175,7 +180,7 @@
             "location": "[parameters('location')]",
             "properties": {
                 "administratorLogin": "[variables('sqlServerLogin')]",
-                "administratorLoginPassword": "[variables('sqlServerAdminPw')]"
+                "administratorLoginPassword": "[parameters('sqlServerAdminPw')]"
             },
             "resources": [
                 {
