@@ -35,6 +35,12 @@
             "metadata": {
                 "description": "Password for sql database."
             }
+        },
+        "jwtSecret": {
+            "type": "string",
+            "metadata": {
+                "description": "JWT signature secret"
+            }
         }
     },
     "variables": {
@@ -165,6 +171,17 @@
                     ],
                     "properties": {
                         "value": "[concat('Data Source=tcp:', reference(concat('Microsoft.Sql/servers/', variables('sqlServerName'))).fullyQualifiedDomainName, ',1433;Initial Catalog=', variables('sqlDbName'), ';User Id=', variables('sqlServerLogin'), '@', variables('sqlServerName'), ';Password=', parameters('sqlServerAdminPw'), ';')]"
+                    }
+                },
+                {
+                    "name": "AppSettings--SecretKey",
+                    "type": "secrets",
+                    "apiVersion": "2016-10-01",
+                    "dependsOn": [
+                        "[variables('keyVaultName')]"
+                    ],
+                    "properties": {
+                        "value": "[parameters('jwtSecret')]"
                     }
                 }
             ],
