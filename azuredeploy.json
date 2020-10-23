@@ -36,10 +36,16 @@
                 "description": "Password for sql database."
             }
         },
-        "jwtSecret": {
+        "authDomain": {
             "type": "string",
             "metadata": {
-                "description": "JWT signature secret"
+                "description": "Authority"
+            }
+        },
+        "authAudience": {
+            "type": "string",
+            "metadata": {
+                "description": "Auth Audience"
             }
         }
     },
@@ -174,14 +180,25 @@
                     }
                 },
                 {
-                    "name": "AppSettings--SecretKey",
+                    "name": "AuthOptions--Domain",
                     "type": "secrets",
                     "apiVersion": "2016-10-01",
                     "dependsOn": [
                         "[variables('keyVaultName')]"
                     ],
                     "properties": {
-                        "value": "[parameters('jwtSecret')]"
+                        "value": "[parameters('authDomain')]"
+                    }
+                },
+                {
+                    "name": "AuthOptions--Audience",
+                    "type": "secrets",
+                    "apiVersion": "2016-10-01",
+                    "dependsOn": [
+                        "[variables('keyVaultName')]"
+                    ],
+                    "properties": {
+                        "value": "[parameters('authAudience')]"
                     }
                 }
             ],
