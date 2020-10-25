@@ -57,7 +57,8 @@
         "storageAccountName": "[concat(parameters('env'), 'astrostorage')]",
         "sqlServerName": "[concat(parameters('env'), '-astro-sqlserver')]",
         "sqlDbName": "[concat(parameters('env'), '-astro-sqldb')]",
-        "sqlServerLogin": "[concat('L', uniqueString(resourceGroup().id, '2A78F916-9CD8-47E2-9665-24B26E3BB6C0', 'x', '!'))]"
+        "sqlServerLogin": "[concat('L', uniqueString(resourceGroup().id, '2A78F916-9CD8-47E2-9665-24B26E3BB6C0', 'x', '!'))]",
+        "blobContainerName": "astrophotosblob"
     },
     "resources": [
         {
@@ -124,11 +125,22 @@
             "location": "[parameters('location')]",
             "kind": "BlobStorage",
             "sku": {
-                "name": "Standard_LRS"
+                "name": "Standard_LRS",
+                "tier": "Standard"
             },
             "properties": {
                 "accessTier": "Hot"
-            }
+            },
+            "resources": [
+                {
+                    "type": "blobServices/containers",
+                    "apiVersion": "2019-06-01",
+                    "name": "[variables('blobContainerName')]",
+                    "dependsOn": [
+                        "[variables('storageAccountName')]"
+                    ]
+                }
+            ]
         },
         {
             "name": "[variables('keyVaultName')]",
